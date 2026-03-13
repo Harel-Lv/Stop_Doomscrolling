@@ -19,8 +19,17 @@ class HeadPoseEstimator:
     LEFT_MOUTH_CORNER = 61
     RIGHT_MOUTH_CORNER = 291
 
+    def __init__(self, smoothing_alpha: float = 0.35):
+        self.smoothing_alpha = smoothing_alpha
+        self.previous_pose = None
+
+    def _smooth_value(self, previous: float, current: float) -> float:
+        alpha = self.smoothing_alpha
+        return (alpha * current) + ((1.0 - alpha) * previous)
+
     def estimate(self, face_data: Optional[Dict[str, Any]], frame_shape=None) -> Optional[Dict[str, Any]]:
         if face_data is None or frame_shape is None:
+            self.previous_pose = None
             return None
 
         landmarks = face_data["landmarks"]
@@ -36,6 +45,7 @@ class HeadPoseEstimator:
                 landmarks[self.RIGHT_MOUTH_CORNER],
             ], dtype=np.float64)
         except (IndexError, KeyError):
+            self.previous_pose = None
             return None
 
         # מודל פנים תלת-ממדי סטנדרטי מקורב
@@ -68,6 +78,7 @@ class HeadPoseEstimator:
         )
 
         if not success:
+            self.previous_pose = None
             return None
 
         rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
@@ -88,7 +99,7 @@ class HeadPoseEstimator:
         )
         nose_end = tuple(map(int, nose_3d_end[0][0][:2]))
 
-        return {
+        pose_data = {
             "yaw": yaw,
             "pitch": pitch,
             "roll": roll,
@@ -97,3 +108,21 @@ class HeadPoseEstimator:
             "rotation_vector": rotation_vector,
             "translation_vector": translation_vector,
         }
+
+        if self.previous_pose is not None:
+            pose_data["yaw"] = self._smooth_value(self.previous_pose["yaw"], pose_data["yaw"])
+            pose_data["pitch"] = self._smooth_value(self.previous_pose["pitch"], pose_data["pitch"])
+            pose_data["roll"] = self._smooth_value(self.previous_pose["roll"], pose_data["roll"])
+
+            smoothed_end_x = self._smooth_value(self.previous_pose["nose_end"][0], pose_data["nose_end"][0])
+            smoothed_end_y = self._smooth_value(self.previous_pose["nose_end"][1], pose_data["nose_end"][1])
+            pose_data["nose_end"] = (int(smoothed_end_x), int(smoothed_end_y))
+
+        self.previous_pose = {
+            "yaw": pose_data["yaw"],
+            "pitch": pose_data["pitch"],
+            "roll": pose_data["roll"],
+            "nose_end": pose_data["nose_end"],
+        }
+
+        return pose_data

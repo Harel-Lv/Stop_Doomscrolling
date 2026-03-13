@@ -1,0 +1,1 @@
+"""StopDoomscrolling MVP package."""

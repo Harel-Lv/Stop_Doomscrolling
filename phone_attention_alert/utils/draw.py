@@ -3,7 +3,12 @@
 import cv2
 
 
-def draw_phone(frame, phone_data):
+def draw_phone(frame, phone_data, phone_candidates=None):
+    if phone_candidates:
+        for candidate in phone_candidates:
+            x1, y1, x2, y2 = candidate["bbox"]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (80, 80, 80), 1)
+
     if phone_data is None:
         return
 
@@ -129,11 +134,21 @@ def draw_status(frame, logic_data, fps=None):
         2
     )
 
+    cv2.putText(
+        frame,
+        f"score={logic_data.get('smoothed_attention_score', 0.0):.2f}",
+        (20, 225),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (200, 200, 200),
+        2
+    )
+
     if fps is not None:
         cv2.putText(
             frame,
             f"FPS: {fps:.1f}",
-            (20, 200),
+            (20, 250),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
             (255, 255, 255),
