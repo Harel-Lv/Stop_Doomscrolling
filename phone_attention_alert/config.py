@@ -1,0 +1,11 @@
+# config.py
+
+CAMERA_INDEX = 0
+WINDOW_NAME = "Phone Attention Alert"
+
+# YOLO
+YOLO_MODEL_PATH = "yolov8n.pt"
+PHONE_CONFIDENCE_THRESHOLD = 0.40
+
+# Logic
+SUSPICIOUS_FRAMES_THRESHOLD = 15
